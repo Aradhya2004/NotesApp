@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { type newNote } from "./common.interface";
 import { type Note } from "./common.interface";
 import NoteCard from "./components/NoteCard.vue";
@@ -8,13 +8,32 @@ import DeleteModal from "./components/DeleteModal.vue";
 
 const showModal = ref(false);
 const showDeleteModal = ref(false);
-const notes = ref(Array<Note>());
-const selectedNote = ref({} as Note);
+const notes = ref<Array<Note>>([]);
+const selectedNote = ref({ id: 0, title: "", point: "" } as Note);
 const isNoteEdit = ref(false);
+
+const STORAGE_KEY = "notes-history";
+
+const saveToLocalStorage = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes.value));
+};
+
+const loadFromLocalStorage = () => {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    notes.value = JSON.parse(stored);
+  }
+};
+
+// Load notes on component mount
+onMounted(() => {
+  loadFromLocalStorage();
+});
 
 const openAddNoteModal = () => {
   showModal.value = true;
-  selectedNote.value = {} as Note;
+  isNoteEdit.value = false;
+  selectedNote.value = { id: 0, title: "", point: "" } as Note;
 };
 
 const updateShowModal = (e: boolean) => {
@@ -23,14 +42,12 @@ const updateShowModal = (e: boolean) => {
 };
 
 const openDeleteModal = (e: Note) => {
-  selectedNote.value = {} as Note;
   selectedNote.value = notes.value.find((note) => note.id === e.id) as Note;
   showDeleteModal.value = true;
 };
 
 const openEditModal = (e: Note) => {
   isNoteEdit.value = true;
-  selectedNote.value = {} as Note;
   selectedNote.value = notes.value.find((note) => note.id === e.id) as Note;
   showModal.value = true;
 };
@@ -40,21 +57,27 @@ const updateDeleteModal = (e: boolean) => {
 };
 
 const addNote = (note: newNote) => {
-  let newnote = {
+  const newnote: Note = {
     id: notes.value.length + 1,
     title: note.title,
     point: note.point,
   };
+
   notes.value.push(newnote);
-  console.log('notes....', notes.value);
+  saveToLocalStorage();
 };
 
 const editNote = (note: Note) => {
   const selectedIndex = notes.value.findIndex(
     (el) => el.id === selectedNote.value.id
   );
-  notes.value[selectedIndex] = note;
-  selectedNote.value = {} as Note;
+
+  if (selectedIndex !== -1) {
+    notes.value[selectedIndex] = note;
+    saveToLocalStorage();
+  }
+
+  selectedNote.value = { id: 0, title: "", point: "" } as Note;
   isNoteEdit.value = false;
 };
 
@@ -62,8 +85,13 @@ const deleteNote = () => {
   const selectedIndex = notes.value.findIndex(
     (el) => el.id === selectedNote.value.id
   );
-  notes.value.splice(selectedIndex, 1);
-  selectedNote.value = {} as Note;
+
+  if (selectedIndex !== -1) {
+    notes.value.splice(selectedIndex, 1);
+    saveToLocalStorage();
+  }
+
+  selectedNote.value = { id: 0, title: "", point: "" } as Note;
 };
 </script>
 
